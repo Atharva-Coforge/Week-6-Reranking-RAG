@@ -19,16 +19,22 @@ Reimbursable expense means a business-related cost incurred by an employee that 
 An employee shall submit an expense claim through the expense system, itemizing each expense by date, amount, and business purpose. A claim missing an itemized business purpose is returned to the employee for correction before it proceeds to review.
 
 ## 3.2 Receipt requirements
-An employee shall attach a receipt for any single expense exceeding $25. An expense of $25 or less may be submitted without a receipt, provided the amount and business purpose are recorded in the claim.
+An employee shall attach a receipt for any single expense exceeding $25. An expense of $25 or less may be submitted without a receipt, provided the amount and business purpose are recorded in the claim. Where a receipt is missing and the amount exceeds $25, the employee logs the gap on form EXP-14B before the claim can proceed. Form EXP-41B is a vendor setup sheet and is not accepted as that log.
 
 ## 4.1 Meal expense caps
-A meal expense of $75 or less per meal is reimbursable upon submission of a valid claim and, where required under Section 3.2, a receipt. This cap applies per individual meal, not to an employee's total daily meal spend.
+A meal expense of $75 or less per meal is reimbursable upon submission of a valid claim and, where required under Section 3.2, a receipt. This cap applies per individual meal, not to an employee's total daily meal spend. On the claim line, the employee uses code EXP-MEAL-75.
 
 ## 4.2 Non-reimbursable items
 Alcohol is not reimbursable under this procedure. Where a meal receipt includes alcohol as a line item, the employee shall deduct the cost of the alcohol from the claimed amount before submission. A claim found to include the cost of alcohol is returned to the employee for correction.
 
 ## 4.3 Exceeding the meal cap
-A meal expense exceeding $75 requires the approval of the employee's supervisor before reimbursement. The employee shall note the reason for the excess in the claim at submission. Where supervisor approval is not obtained, the claim is capped at $75 and the remaining amount is not reimbursed.
+A meal expense exceeding $75 requires the approval of the employee's supervisor before reimbursement. The employee shall note the reason for the excess in the claim at submission. Where supervisor approval is not obtained, the claim is capped at $75 and the remaining amount is not reimbursed. Payroll clerk Jonah Prieto records the payment after that approval. Jonah Prieto-Walsh works the same payroll queue and is not an approver. His name shall not be entered as the approver on form EXP-14B.
+
+## 4.4 Overnight food stipend
+An employee traveling overnight may claim a food stipend of $65 per day. This stipend is not the $75 per-meal cap in Section 4.1. It covers food for the day away from home, and it is not calculated per meal. The employee shall not claim Section 4.1 and the daily stipend for the same meal. The claim line uses code EXP-FIELD-65. Code EXP-MEAL-75 belongs only to Section 4.1.
+
+## 4.5 Getting to the customer
+When staff pay out of pocket to fly to a customer site, repayment covers only the lowest published standard-cabin fare on a commercial carrier. A seat in a premium cabin, including any buy-up at the airport, is a personal cost. The employee subtracts that buy-up before filing.
 
 ## 5.1 Submission timing
 An employee shall submit an expense claim within 30 days of the date the expense was incurred. A claim submitted after this period requires the approval of the employee's supervisor before it is processed.
