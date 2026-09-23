@@ -11,11 +11,15 @@ is cut into windows with 50 tokens of overlap. Each window keeps the same
 section, section title, and document name. The window is moved to the next
 word so a chunk does not start or end mid-word. The written file also has
 lineage fields such as ``ap-us-0001:v2.0:AP-7.1:2``. Those strings split
-into many ids, so the body cap stays at 200 and the whole file stays under
+into many ids, so the body cap stays at 190 and the whole file stays under
 300 tokens.
 
 A page with no heading, such as month-end close, uses the same 190/50 rule.
 Its section is ``page-1`` and its section title is the document title.
+
+After the heading split, every chunk is checked for the required lineage
+fields. If one is missing, that file is cut once more as page windows.
+That check is a field test, not an LLM call.
 """
 
 import re
@@ -32,6 +36,16 @@ PAGE_LABEL = re.compile(r"^Page \d+$")
 HEADER_FIELD = re.compile(
     r"^(doc_id|record_id|family|version|effective_date|status|"
     r"superseded_by|currency|entity_types):\s*(.*)$"
+)
+_REQUIRED = (
+    "chunk_id",
+    "document_id",
+    "document_name",
+    "version",
+    "superseded_by",
+    "section",
+    "section_title",
+    "text",
 )
 
 
@@ -86,6 +100,7 @@ def chunk_markdown(path: Path, tokenizer: Any) -> list[Chunk]:
     version = fields.get("version", "")
     superseded_by = fields.get("superseded_by", "none") or "none"
     effective_date = fields.get("effective_date", "")
+    require_date = bool(fields.get("effective_date"))
     sections = _sections(pages)
     if sections:
         chunks: list[Chunk] = []
@@ -105,8 +120,31 @@ def chunk_markdown(path: Path, tokenizer: Any) -> list[Chunk]:
                     tokenizer=tokenizer,
                 )
             )
-        return chunks
-    chunks = []
+        if chunks and all(_complete(chunk, require_date=require_date) for chunk in chunks):
+            return chunks
+    return _page_chunks(
+        pages,
+        tokenizer=tokenizer,
+        document_id=document_id,
+        document_name=document_name,
+        version=version,
+        superseded_by=superseded_by,
+        effective_date=effective_date,
+    )
+
+
+def _page_chunks(
+    pages: list[_Page],
+    *,
+    tokenizer: Any,
+    document_id: str,
+    document_name: str,
+    version: str,
+    superseded_by: str,
+    effective_date: str,
+) -> list[Chunk]:
+    """Cut each page with the 190/50 window rule."""
+    chunks: list[Chunk] = []
     for page in pages:
         chunks.extend(
             _emit(
@@ -124,6 +162,20 @@ def chunk_markdown(path: Path, tokenizer: Any) -> list[Chunk]:
             )
         )
     return chunks
+
+
+def _complete(chunk: Chunk, *, require_date: bool) -> bool:
+    """True when every required lineage field is filled in."""
+    for name in _REQUIRED:
+        if not str(getattr(chunk, name)).strip():
+            return False
+    if chunk.page < 1:
+        return False
+    if chunk.source not in ("text", "image"):
+        return False
+    if require_date and not chunk.effective_date.strip():
+        return False
+    return True
 
 
 def _pages(markdown: str) -> list[_Page]:
