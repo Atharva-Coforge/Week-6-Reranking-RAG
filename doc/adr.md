@@ -20,9 +20,26 @@ Status: accepted
 
 `src/embeddings.py` puts the method back after the model loads. `_get_extended_attention_mask` builds the additive mask Transformers 4 used to build. `_restore_attention_mask_method` attaches it to the `NomicBertModel` class when the method is missing. The embedding model stays `nomic-embed-text-v1.5`.
 
+## ADR 3 — Cap every chunk at 300 tokens
+
+Status: accepted
+
+Section chunks were previously left whole, so `AP-7.1` was one chunk of well over 300 words. The 300-character fallback applied only to pages with no heading. That fallback also stepped backward by 50 characters, which landed inside a word. Month-end chunks therefore started mid-word (`l records`, `olidays`).
+
+Counting whitespace-separated words was not enough. `page-1` of month-end close was 300 words and 360 tokens from `nomic-embed-text-v1.5`, because that tokenizer splits some words into more than one id.
+
+A token is one id from that tokenizer, with special tokens left off. Every chunk's text encodes to fewer than 300 ids. When a section is longer, it is cut into windows that overlap by 50 of those tokens. The cut moves to the next word so a chunk does not start or end mid-word. Each window keeps the same `section`, `section_title`, and `document_name`. A second window's `chunk_id` gains a part suffix so the two rows do not overwrite each other. A page with no heading, such as month-end close, uses the same cap. Its section stays `page-1`. The `search_document:` prefix is added later, only while embedding, and is not part of this count.
+
+## ADR 4 — Tighten the body cap to 200 tokens
+
+Status: accepted
+
+ADR 3 capped the body at 300 Nomic tokens. The written chunk file also has lineage fields. A string such as `ap-us-0001:v2.0:AP-7.1:2` is one field, but a tokenizer splits it into many ids. `AP-7.1.md` was 372 tokens for the whole file when the body sat near the 300 cap.
+
+The body cap is now 190 of those same Nomic tokens, still with 50 tokens of overlap. That leaves room for the header so the written file stays under 300 tokens. The count is still body text only. Special tokens and the `search_document:` prefix are still left off.
+
 ## Not recorded yet
 
-- Chunk fallback of about 300 characters with 50 characters of overlap, and how a headingless chunk gets its title.
 - No `superseded_by` filter at search time. Both accounts-payable versions stay in the index.
 - Retrieval sizes: pool 12, then 24, then 48. Final k 3, then 5, then 8. RRF constant 60.
 - Hybrid search is BM25 plus cosine, merged with RRF, then Cohere `rerank-v4.0-pro`.

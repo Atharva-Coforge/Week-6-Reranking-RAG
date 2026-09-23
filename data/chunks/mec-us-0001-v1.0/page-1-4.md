@@ -1,0 +1,13 @@
+chunk_id: mec-us-0001:v1.0:page-1:1:4
+document_id: mec-us-0001
+document_name: Month-End Close Procedure
+version: v1.0
+superseded_by: none
+section: page-1
+section_title: Month-End Close Procedure
+page: 1
+part: 4
+source: text
+effective_date: 2025-09-01
+
+the month on the same terms. Temporary clerks supplied by Northstar Staffing may build the schedules that support the seal, yet they sit outside the posting group and must not type lines into the ledger. A line typed by someone outside the posting group is undone. The finance lead either asks a member of that group to enter it again or leaves the matter until after the seal. Only five badge numbers may add or amend lines while the month is still open: US-0001, US-0020, US-0984, US-9033, and US-8932. A line entered under any other badge is not allowed and is reversed when it is found. Travel spending is recorded under general ledger code 6100-TRAVEL. Unpaid bills are recorded under general ledger code 2100-AP. The person who enters the line applies the category at the time of entry. Once the finance lead has signed, no adjustment and no new
