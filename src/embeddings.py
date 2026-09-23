@@ -1,9 +1,42 @@
 """Nomic bi-encoder. Prefixes are applied here and are not stored."""
 
+import torch
 from sentence_transformers import SentenceTransformer
 
 DOCUMENT_PREFIX = "search_document: "
 QUERY_PREFIX = "search_query: "
+
+
+def _get_extended_attention_mask(self, attention_mask, input_shape, device=None, dtype=None):
+    """Transformers 4 helper that nomic-bert-2048 still calls.
+
+    Transformers 5 removed this method from the base model. The mask stays
+    1 for real tokens and 0 for padding, then becomes an additive mask.
+    """
+    del input_shape, device
+    if attention_mask is None:
+        return None
+    if dtype is None:
+        dtype = getattr(self, "dtype", torch.float32)
+    if attention_mask.dim() == 3:
+        extended = attention_mask[:, None, :, :]
+    elif attention_mask.dim() == 2:
+        extended = attention_mask[:, None, None, :]
+    else:
+        raise ValueError(f"unexpected attention mask shape {tuple(attention_mask.shape)}")
+    extended = extended.to(dtype=dtype)
+    return (1.0 - extended) * torch.finfo(dtype).min
+
+
+def _restore_attention_mask_method(model: SentenceTransformer) -> None:
+    """Put the removed helper back on the nomic backbone class."""
+    for module in model.modules():
+        cls = module.__class__
+        if cls.__name__ != "NomicBertModel":
+            continue
+        if not hasattr(cls, "get_extended_attention_mask"):
+            cls.get_extended_attention_mask = _get_extended_attention_mask
+        return
 
 
 class NomicEmbeddingModel:
@@ -20,6 +53,7 @@ class NomicEmbeddingModel:
             trust_remote_code=True,
             truncate_dim=dimensions,
         )
+        _restore_attention_mask_method(self._model)
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed raw chunk texts. Returns one 768-float vector per text."""
