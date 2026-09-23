@@ -25,6 +25,9 @@ class Config:
     """Fixed settings for one run of the pipeline."""
 
     data_dir: Path
+    raw_dir: Path
+    text_dir: Path
+    chunks_dir: Path
     chroma_dir: Path
     embedding_model: str
     embedding_dimensions: int
@@ -58,6 +61,9 @@ def load_config() -> Config:
     _load_dotenv(ROOT / ".env")
     return Config(
         data_dir=ROOT / "data",
+        raw_dir=ROOT / "data" / "raw",
+        text_dir=ROOT / "data" / "text",
+        chunks_dir=ROOT / "data" / "chunks",
         chroma_dir=ROOT / ".chroma",
         embedding_model=EMBEDDING_MODEL,
         embedding_dimensions=EMBEDDING_DIMENSIONS,
