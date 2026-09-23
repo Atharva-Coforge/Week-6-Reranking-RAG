@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+.chroma/
 *.py[codz]
 *$py.class
 
@@ -219,3 +220,4 @@ __marimo__/
 
 Notes.md
 Assignment.txt
+plan.md

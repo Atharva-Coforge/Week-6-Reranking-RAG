@@ -3,9 +3,15 @@ name = "week-6-reranking-rag"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "chromadb",
+    "cohere",
+    "httpx",
     "mypy>=2.3.1",
+    "pymupdf",
     "pytest>=9.1.1",
+    "rank-bm25",
     "ruff>=0.16.8",
+    "sentence-transformers",
 ]
 
 [tool.ruff]
