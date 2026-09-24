@@ -31,6 +31,19 @@ class ChromaStore:
             metadata={"hnsw:space": "cosine"},
         )
 
+    def reset(self) -> None:
+        """Drop the collection so a re-ingest does not keep leftover ids."""
+        name = self._collection.name
+        self._client.delete_collection(name)
+        self._collection = self._client.get_or_create_collection(
+            name=name,
+            metadata={"hnsw:space": "cosine"},
+        )
+
+    def count(self) -> int:
+        """Return how many rows are in the collection."""
+        return self._collection.count()
+
     def upsert(
         self,
         chunk_id: str,
