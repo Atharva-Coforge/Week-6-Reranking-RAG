@@ -6,7 +6,9 @@ The indexed string is ``section + section_title + text`` so a code such as
 """
 
 import re
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Any, cast
 
 import chromadb
 from chromadb.config import Settings
@@ -83,6 +85,15 @@ class ChromaStore:
         """Return how many rows are in the collection."""
         return self._collection.count()
 
+    def ingested_rows(self) -> list[tuple[str, str]]:
+        """Every stored id and raw body. Used to hash the ingested corpus."""
+        rows = self._collection.get(include=["documents"])
+        documents = rows["documents"] or []
+        return [
+            (chunk_id, documents[index] if index < len(documents) else "")
+            for index, chunk_id in enumerate(rows["ids"])
+        ]
+
     def upsert(
         self,
         chunk_id: str,
@@ -93,7 +104,7 @@ class ChromaStore:
         """Store one chunk. `document` is the raw text, with no search prefix."""
         self._collection.upsert(
             ids=[chunk_id],
-            embeddings=[embedding],
+            embeddings=cast(list[Sequence[float]], [embedding]),
             documents=[document],
             metadatas=[metadata],
         )
@@ -104,7 +115,7 @@ class ChromaStore:
         if count == 0 or n_results <= 0:
             return []
         found = self._collection.query(
-            query_embeddings=[embedding],
+            query_embeddings=cast(list[Sequence[float]], [embedding]),
             n_results=min(n_results, count),
             include=["documents", "metadatas", "distances"],
         )
@@ -130,7 +141,7 @@ class ChromaStore:
         for index, _chunk_id in enumerate(self._chunk_ids):
             document = documents[index] if index < len(documents) else ""
             metadata = metadatas[index] if index < len(metadatas) else None
-            corpus.append(_tokens(_bm25_text(document, metadata)))
+            corpus.append(_tokens(_bm25_text(document, _metadata(metadata))))
         self._bm25 = BM25Okapi(corpus) if corpus else None
 
     def keyword_search(self, query: str, n_results: int) -> list[SearchHit]:
@@ -169,7 +180,7 @@ class ChromaStore:
                 SearchHit(
                     id=chunk_id,
                     document="" if document is None else document,
-                    metadata={} if metadata is None else dict(metadata),
+                    metadata=_metadata(metadata),
                     distance=0.0,
                 )
             )
@@ -211,9 +222,22 @@ def _fold_commas(text: str) -> str:
     return folded
 
 
+def _metadata(raw: Mapping[str, Any] | None) -> dict[str, str | int | float]:
+    """Keep the flat strings and numbers Chroma stored for one chunk."""
+    if not raw:
+        return {}
+    cleaned: dict[str, str | int | float] = {}
+    for key, value in raw.items():
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, str | int | float):
+            cleaned[key] = value
+    return cleaned
+
+
 def _bm25_text(
     document: str | None,
-    metadata: dict[str, str | int | float] | None,
+    metadata: Mapping[str, str | int | float] | None,
 ) -> str:
     fields = metadata or {}
     section = str(fields.get("section", ""))
@@ -225,9 +249,9 @@ def _bm25_text(
 
 def _hit(
     chunk_id: str,
-    documents: list[str | None],
-    metadatas: list[dict[str, str | int | float] | None],
-    distances: list[float],
+    documents: Sequence[str | None],
+    metadatas: Sequence[Mapping[str, Any] | None],
+    distances: Sequence[float],
     index: int,
 ) -> SearchHit:
     document = documents[index] if index < len(documents) else None
@@ -236,6 +260,6 @@ def _hit(
     return SearchHit(
         id=chunk_id,
         document="" if document is None else document,
-        metadata={} if metadata is None else dict(metadata),
+        metadata=_metadata(metadata),
         distance=float(distance),
     )

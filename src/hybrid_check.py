@@ -1,7 +1,7 @@
-"""Print RRF order, Cohere order, and the first final set.
+"""Print RRF order, Cohere order, and the final set.
 
 Does not ingest. The question is embedded once. Cohere receives the raw
-question plus the fused bodies. Final k on this run is 3. Writes
+question plus the fused bodies. Final k on this run is 8. Writes
 `eval/retrieval-before-rerank.md` and `eval/retrieval-after-rerank.md`.
 """
 
@@ -34,14 +34,14 @@ def main() -> None:
     found = pipeline.ask(QUESTION)
     print("question", QUESTION)
     print(f"pool {config.pool_size} per search")
-    print(f"final k {config.final_k[0]}")
+    print(f"final k {config.final_k}")
     _print_ids("bm25", found.bm25)
     _print_ids("cosine", found.cosine)
     _print_ids("fused (RRF)", found.fused)
     _print_ids("reranked (Cohere)", found.reranked)
     _print_list("final", found.final)
     BEFORE.write_text(_before(QUESTION, config.pool_size, found), encoding="utf-8")
-    AFTER.write_text(_after(QUESTION, config.pool_size, config.final_k[0], found), encoding="utf-8")
+    AFTER.write_text(_after(QUESTION, config.pool_size, config.final_k, found), encoding="utf-8")
     print(f"wrote {BEFORE}")
     print(f"wrote {AFTER}")
 

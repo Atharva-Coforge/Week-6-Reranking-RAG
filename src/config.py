@@ -15,8 +15,7 @@ COHERE_MODEL = "rerank-v4.0-pro"
 OLLAMA_URL = "http://127.0.0.1:11434"
 LLM_MODEL = "qwen3:8b"
 POOL_SIZE = 12
-FINAL_K = (3, 5, 8)
-MAX_RETRIES = 3
+FINAL_K = 8
 RRF_CONSTANT = 60
 
 
@@ -29,6 +28,7 @@ class Config:
     text_dir: Path
     chunks_dir: Path
     chroma_dir: Path
+    cache_dir: Path
     embedding_model: str
     embedding_dimensions: int
     cohere_model: str
@@ -36,8 +36,7 @@ class Config:
     ollama_url: str
     llm_model: str
     pool_size: int
-    final_k: tuple[int, int, int]
-    max_retries: int
+    final_k: int
     rrf_constant: int
 
 
@@ -65,6 +64,7 @@ def load_config() -> Config:
         text_dir=ROOT / "data" / "text",
         chunks_dir=ROOT / "data" / "chunks",
         chroma_dir=ROOT / ".chroma",
+        cache_dir=ROOT / ".cache",
         embedding_model=EMBEDDING_MODEL,
         embedding_dimensions=EMBEDDING_DIMENSIONS,
         cohere_model=COHERE_MODEL,
@@ -73,6 +73,5 @@ def load_config() -> Config:
         llm_model=LLM_MODEL,
         pool_size=POOL_SIZE,
         final_k=FINAL_K,
-        max_retries=MAX_RETRIES,
         rrf_constant=RRF_CONSTANT,
     )
