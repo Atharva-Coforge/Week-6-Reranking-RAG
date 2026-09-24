@@ -16,6 +16,37 @@ from .adapters import SearchHit
 
 COLLECTION_NAME = "policies"
 _TOKEN = re.compile(r"[a-z0-9]+(?:\.[0-9]+)*")
+_HYPHEN_TOKEN = re.compile(r"[a-z0-9]+(?:\.[0-9]+)*(?:-[a-z0-9]+(?:\.[0-9]+)*)+")
+_COMMA_THOUSANDS = re.compile(r"(\d),(\d{3})\b")
+_STOP = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "for",
+        "from",
+        "in",
+        "is",
+        "it",
+        "its",
+        "of",
+        "on",
+        "or",
+        "that",
+        "the",
+        "this",
+        "to",
+        "was",
+        "what",
+        "who",
+        "with",
+    }
+)
 
 
 class ChromaStore:
@@ -146,8 +177,38 @@ class ChromaStore:
 
 
 def _tokens(text: str) -> list[str]:
-    """Split so ``AP-5.1`` yields ``ap`` and ``5.1``."""
-    return _TOKEN.findall(text.lower())
+    """Split so ``AP-5.1`` yields ``ap-5.1``, ``ap``, and ``5.1``.
+
+    Hyphenated forms are taken from the lowercased text before hyphens
+    become spaces. ``6100-TRAVEL`` also yields ``6100-travel``. Dotted
+    numbers such as ``5.1`` stay one token. Money is folded to digits
+    (``$10,000`` → ``10000``). Short function words are dropped. A
+    trailing ``s`` is also kept as a stem so ``costs`` can match ``cost``.
+    """
+    lowered = _fold_commas(text.lower().replace("$", " "))
+    tokens: list[str] = []
+    for token in _TOKEN.findall(lowered.replace("-", " ")):
+        if token in _STOP:
+            continue
+        tokens.append(token)
+        if len(token) > 4 and token.endswith("s"):
+            stem = token[:-1]
+            if stem not in _STOP:
+                tokens.append(stem)
+    for token in _HYPHEN_TOKEN.findall(lowered):
+        if token not in _STOP:
+            tokens.append(token)
+    return tokens
+
+
+def _fold_commas(text: str) -> str:
+    folded = text
+    while True:
+        nxt = _COMMA_THOUSANDS.sub(r"\1\2", folded)
+        if nxt == folded:
+            break
+        folded = nxt
+    return folded
 
 
 def _bm25_text(
@@ -157,8 +218,9 @@ def _bm25_text(
     fields = metadata or {}
     section = str(fields.get("section", ""))
     title = str(fields.get("section_title", ""))
+    name = str(fields.get("document_name", ""))
     body = "" if document is None else document
-    return f"{section} {title} {body}"
+    return f"{section} {title} {name} {body}"
 
 
 def _hit(
