@@ -24,5 +24,8 @@ jobs:
       - name: mypy
         run: uv run mypy src/
 
+      - name: ingest
+        run: uv run python -m src.main ingest
+
       - name: pytest
         run: uv run pytest
