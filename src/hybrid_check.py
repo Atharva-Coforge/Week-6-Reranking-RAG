@@ -1,7 +1,8 @@
 """Print RRF order, Cohere order, and the first final set.
 
 Does not ingest. The question is embedded once. Cohere receives the raw
-question plus the fused bodies. Final k on this run is 3.
+question plus the fused bodies. Final k on this run is 3. Writes
+`eval/retrieval-before-rerank.md` and `eval/retrieval-after-rerank.md`.
 """
 
 from pathlib import Path
@@ -14,7 +15,8 @@ from .pipeline import Pipeline, Retrieval
 from .rerank import CohereReranker
 
 QUESTION = "What is section AP-5.1 about?"
-SNAPSHOT = Path("eval/retrieval-after-rerank.md")
+BEFORE = Path("eval/retrieval-before-rerank.md")
+AFTER = Path("eval/retrieval-after-rerank.md")
 
 
 def main() -> None:
@@ -33,11 +35,15 @@ def main() -> None:
     print("question", QUESTION)
     print(f"pool {config.pool_size} per search")
     print(f"final k {config.final_k[0]}")
+    _print_ids("bm25", found.bm25)
+    _print_ids("cosine", found.cosine)
     _print_ids("fused (RRF)", found.fused)
     _print_ids("reranked (Cohere)", found.reranked)
     _print_list("final", found.final)
-    SNAPSHOT.write_text(_snapshot(QUESTION, config.pool_size, config.final_k[0], found), encoding="utf-8")
-    print(f"wrote {SNAPSHOT}")
+    BEFORE.write_text(_before(QUESTION, config.pool_size, found), encoding="utf-8")
+    AFTER.write_text(_after(QUESTION, config.pool_size, config.final_k[0], found), encoding="utf-8")
+    print(f"wrote {BEFORE}")
+    print(f"wrote {AFTER}")
 
 
 def _print_ids(title: str, hits: list[SearchHit]) -> None:
@@ -64,36 +70,50 @@ def _print_chunk(index: int, hit: SearchHit) -> None:
     print()
 
 
-def _snapshot(question: str, pool_size: int, final_k: int, found: Retrieval) -> str:
+def _before(question: str, pool_size: int, found: Retrieval) -> str:
+    lines = [
+        "# Retrieval before rerank",
+        "",
+        f"Question: `{question}`",
+        "",
+        f"BM25 pool: {len(found.bm25)} (cap {pool_size}). ",
+        f"Cosine / vector pool: {len(found.cosine)} (cap {pool_size}). ",
+        f"Fused: {len(found.fused)}. This is the Cohere input: the raw ",
+        "question plus these bodies, in RRF order. No vectors. No prefixes.",
+        "",
+    ]
+    lines.extend(_section("BM25", found.bm25))
+    lines.extend(_section("Cosine (vector)", found.cosine))
+    lines.extend(_section("Fused (RRF / reranker input)", found.fused))
+    return "\n".join(lines)
+
+
+def _after(question: str, pool_size: int, final_k: int, found: Retrieval) -> str:
     lines = [
         "# Retrieval after rerank",
         "",
         f"Question: `{question}`",
         "",
         f"Pool {pool_size} per search. Final k {final_k}. ",
-        "Cohere saw the raw question and the fused bodies.",
+        "Compare this order with `eval/retrieval-before-rerank.md`.",
         "",
-        "## Fused (RRF)",
+        "## Reranked (Cohere)",
         "",
     ]
-    for index, hit in enumerate(found.fused, start=1):
-        lines.append(f"{index}. `{hit['id']}`")
-    lines.extend(["", "## Reranked (Cohere)", ""])
     for index, hit in enumerate(found.reranked, start=1):
         lines.append(f"{index}. `{hit['id']}`")
     lines.extend(["", "## Final", ""])
-    lines.extend(_section("Final", found.final))
+    lines.extend(_section("Final", found.final)[2:])
     return "\n".join(lines)
 
 
 def _section(title: str, hits: list[SearchHit]) -> list[str]:
-    del title
-    lines: list[str] = []
+    lines = [f"# {title}", ""]
     for index, hit in enumerate(hits, start=1):
         meta = hit["metadata"]
         lines.extend(
             [
-                f"### {index}. `{hit['id']}`",
+                f"## {index}. `{hit['id']}`",
                 "",
                 f"- section: `{meta.get('section')}`",
                 f"- version: `{meta.get('version')}`",
