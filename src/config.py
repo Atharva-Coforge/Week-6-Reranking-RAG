@@ -57,7 +57,7 @@ def _load_dotenv(path: Path) -> None:
 
 
 def load_config() -> Config:
-    """Build the config. `cohere_api_key` is None when COHERE_API_KEY is unset."""
+    """Build the config. `COHERE_API_KEY` and `OLLAMA_URL` come from the environment."""
     _load_dotenv(ROOT / ".env")
     return Config(
         data_dir=ROOT / "data",
@@ -69,7 +69,7 @@ def load_config() -> Config:
         embedding_dimensions=EMBEDDING_DIMENSIONS,
         cohere_model=COHERE_MODEL,
         cohere_api_key=os.environ.get("COHERE_API_KEY"),
-        ollama_url=OLLAMA_URL,
+        ollama_url=os.environ.get("OLLAMA_URL", OLLAMA_URL),
         llm_model=LLM_MODEL,
         pool_size=POOL_SIZE,
         final_k=FINAL_K,
