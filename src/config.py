@@ -14,7 +14,7 @@ EMBEDDING_DIMENSIONS = 768
 COHERE_MODEL = "rerank-v4.0-pro"
 OLLAMA_URL = "http://127.0.0.1:11434"
 LLM_MODEL = "qwen3:8b"
-POOL_SIZES = (12, 24, 48)
+POOL_SIZE = 12
 FINAL_K = (3, 5, 8)
 MAX_RETRIES = 3
 RRF_CONSTANT = 60
@@ -35,7 +35,7 @@ class Config:
     cohere_api_key: str | None
     ollama_url: str
     llm_model: str
-    pool_sizes: tuple[int, int, int]
+    pool_size: int
     final_k: tuple[int, int, int]
     max_retries: int
     rrf_constant: int
@@ -71,7 +71,7 @@ def load_config() -> Config:
         cohere_api_key=os.environ.get("COHERE_API_KEY"),
         ollama_url=OLLAMA_URL,
         llm_model=LLM_MODEL,
-        pool_sizes=POOL_SIZES,
+        pool_size=POOL_SIZE,
         final_k=FINAL_K,
         max_retries=MAX_RETRIES,
         rrf_constant=RRF_CONSTANT,
