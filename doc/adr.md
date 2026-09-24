@@ -30,13 +30,23 @@ Counting whitespace-separated words was not enough. `page-1` of month-end close 
 
 A token is one id from that tokenizer, with special tokens left off. Every chunk's text encodes to fewer than 300 ids. When a section is longer, it is cut into windows that overlap by 50 of those tokens. The cut moves to the next word so a chunk does not start or end mid-word. Each window keeps the same `section`, `section_title`, and `document_name`. A second window's `chunk_id` gains a part suffix so the two rows do not overwrite each other. A page with no heading, such as month-end close, uses the same cap. Its section stays `page-1`. The `search_document:` prefix is added later, only while embedding, and is not part of this count.
 
-## ADR 4 — Tighten the body cap to 200 tokens
+## ADR 4 — Tighten the body cap to 300 tokens
 
 Status: accepted
 
 ADR 3 capped the body at 300 Nomic tokens. The written chunk file also has lineage fields. A string such as `ap-us-0001:v2.0:AP-7.1:2` is one field, but a tokenizer splits it into many ids. `AP-7.1.md` was 372 tokens for the whole file when the body sat near the 300 cap.
 
-The body cap is now 190 of those same Nomic tokens, still with 50 tokens of overlap. That leaves room for the header so the written file stays under 300 tokens. The count is still body text only. Special tokens and the `search_document:` prefix are still left off.
+The body cap is now 190 words of those same Nomic tokens, still with 50 tokens of overlap. That leaves room for the header so the written file stays under 300 tokens. The count is still body text only. Special tokens and the `search_document:` prefix are still left off.
+
+## ADR 5 — Reset the policies collection before upsert
+
+Status: accepted
+
+Chroma `upsert` is keyed by `chunk_id`, so a second ingest of the same ids overwrites those rows and does not duplicate them. That is not enough when chunking changes. A section that used to be three windows and is now two leaves the old third `chunk_id` in the collection. Search would still return that leftover.
+
+Ingest therefore drops the `policies` collection and creates it again, then writes the current chunks. A re-run is a snapshot of `data/text`, not a merge with the previous index. Recovery after a crash mid-write is the same command: embed every chunk, reset, upsert. The `two_sentence_check` collection is a different name and is not dropped.
+
+Resume-from-the-failed-row was not used. There are 44 chunks. Re-embedding them is cheaper than tracking which ids already landed.
 
 ## Not recorded yet
 
