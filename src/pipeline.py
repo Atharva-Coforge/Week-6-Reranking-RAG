@@ -9,9 +9,28 @@ from dataclasses import dataclass
 
 from .adapters import (
     EmbeddingModelAdapter,
+    LLMAdapter,
     ReRankerAdapter,
     SearchHit,
     VectorStoreAdapter,
+)
+from .prompts import (
+    ANSWER_SYSTEM,
+    SUFFICIENCY_SYSTEM,
+    answer_user,
+    parse_sufficiency,
+    sufficiency_user,
+)
+
+_WHAT_CHANGED = (
+    "what changed",
+    "old vs new",
+    "between versions",
+    "before and after",
+    "difference",
+    "compare",
+    "compared",
+    "changed",
 )
 
 FIRST_POOL = 12
@@ -28,6 +47,10 @@ class Retrieval:
     fused: list[SearchHit]
     reranked: list[SearchHit]
     final: list[SearchHit]
+    sufficient: bool
+    sufficiency_text: str
+    question_type: str
+    answer: str
 
 
 class Pipeline:
@@ -41,6 +64,7 @@ class Pipeline:
         final_k: tuple[int, int, int] = FINAL_K,
         rrf_constant: int = RRF_K,
         reranker: ReRankerAdapter | None = None,
+        llm: LLMAdapter | None = None,
     ) -> None:
         self._embedder = embedder
         self._store = store
@@ -48,6 +72,7 @@ class Pipeline:
         self._final_k = final_k
         self._rrf_constant = rrf_constant
         self._reranker = reranker
+        self._llm = llm
 
     def ask(self, question: str) -> Retrieval:
         """Search the existing index. PDFs and `data/text/` are not read.
@@ -58,12 +83,20 @@ class Pipeline:
         query_vector = self._embedder.embed_query(question)
         found = self._retrieve(question, query_vector)
         reranked = _apply_order(found.fused, self._rerank(question, found.fused))
+        final = reranked[: self._final_k[0]]
+        sufficient, sufficiency_text = self._sufficiency(question, final)
+        question_type = classify_question(question)
+        answer = self._answer(question, final, question_type)
         return Retrieval(
             bm25=found.bm25,
             cosine=found.cosine,
             fused=found.fused,
             reranked=reranked,
-            final=reranked[: self._final_k[0]],
+            final=final,
+            sufficient=sufficient,
+            sufficiency_text=sufficiency_text,
+            question_type=question_type,
+            answer=answer,
         )
 
     def _retrieve(self, question: str, query_vector: list[float]) -> Retrieval:
@@ -81,6 +114,31 @@ class Pipeline:
             fused=fused,
             reranked=fused,
             final=fused[: self._final_k[0]],
+            sufficient=False,
+            sufficiency_text="",
+            question_type="",
+            answer="",
+        )
+
+    def _sufficiency(
+        self, question: str, hits: list[SearchHit]
+    ) -> tuple[bool, str]:
+        """One judge call on the current final-k slice. No answer text."""
+        if self._llm is None or not hits:
+            return False, ""
+        text = self._llm.complete(
+            SUFFICIENCY_SYSTEM, sufficiency_user(question, hits)
+        )
+        return parse_sufficiency(text), text
+
+    def _answer(
+        self, question: str, hits: list[SearchHit], question_type: str
+    ) -> str:
+        """One answer call on the current final-k slice. After the judge."""
+        if self._llm is None or not hits:
+            return ""
+        return self._llm.complete(
+            ANSWER_SYSTEM, answer_user(question, hits, question_type)
         )
 
     def _rerank(self, question: str, fused: list[SearchHit]) -> list[int]:
@@ -91,6 +149,14 @@ class Pipeline:
         if self._reranker is None or not fused:
             return list(range(len(fused)))
         return self._reranker.rerank(question, rerank_documents(fused))
+
+
+def classify_question(question: str) -> str:
+    """Keyword label for the answer prompt. Does not filter the index."""
+    lowered = question.lower()
+    if any(token in lowered for token in _WHAT_CHANGED):
+        return "what-changed"
+    return "rule-in-force"
 
 
 def rerank_documents(hits: list[SearchHit]) -> list[str]:
