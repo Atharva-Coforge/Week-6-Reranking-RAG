@@ -1,7 +1,7 @@
 """Load chunks from `data/text`, embed their raw bodies, and upsert Chroma.
 
 The document prefix is added only inside `embed_documents`. Chroma stores
-the raw body. BM25 is a later step.
+the raw body. BM25 is rebuilt from those rows after the write.
 """
 
 from .adapters import EmbeddingModelAdapter, VectorStoreAdapter
@@ -64,9 +64,14 @@ def main() -> None:
     vectors = embed_chunks(embedder, chunks)
     store.reset()
     upsert_chunks(store, chunks, vectors)
+    store.rebuild_bm25()
     for chunk in chunks:
         print(chunk.chunk_id)
     print(f"{store.count()} rows")
+    print("bm25 5.1")
+    for hit in store.keyword_search("5.1", n_results=5):
+        meta = hit["metadata"]
+        print(f"{hit['id']}  {meta.get('section')}  {meta.get('version')}")
 
 
 if __name__ == "__main__":
