@@ -7,14 +7,14 @@ paragraph of page 2.
 
 A token is one id from the ``nomic-embed-text-v1.5`` tokenizer, not a word.
 Every chunk's text is strictly under 190 of those tokens (we selected 190 because we have many instances of texts having ap-us-0001:v2.0:AP-7.1:2 so these are split into more than 1 tokens, so when we keep the token size as 190, we get all the tokens just under 300 tokens). A longer section
-is cut into windows with 50 tokens of overlap. Each window keeps the same
+is cut into windows with 25 tokens of overlap. Each window keeps the same
 section, section title, and document name. The window is moved to the next
 word so a chunk does not start or end mid-word. The written file also has
 lineage fields such as ``ap-us-0001:v2.0:AP-7.1:2``. Those strings split
 into many ids, so the body cap stays at 190 and the whole file stays under
 300 tokens.
 
-A page with no heading, such as month-end close, uses the same 190/50 rule.
+A page with no heading, such as month-end close, uses the same 190/25 rule.
 Its section is ``page-1`` and its section title is the document title.
 
 After the heading split, every chunk is checked for the required lineage
@@ -28,7 +28,8 @@ from pathlib import Path
 from typing import Any
 
 CHUNK_TOKENS = 190
-CHUNK_OVERLAP = 50
+# CHUNK_OVERLAP = 50
+CHUNK_OVERLAP = 25
 HEADING = re.compile(r"^([A-Z]+-\d+\.\d+)\s+([A-Z][^.]{0,60})$")
 PAGE_HEADING = re.compile(r"^## Page (\d+)\s*$")
 SOURCE_COMMENT = re.compile(r"^<!-- source: (text|image) -->\s*$")
@@ -143,7 +144,7 @@ def _page_chunks(
     superseded_by: str,
     effective_date: str,
 ) -> list[Chunk]:
-    """Cut each page with the 190/50 window rule."""
+    """Cut each page with the 190/25 window rule."""
     chunks: list[Chunk] = []
     for page in pages:
         chunks.extend(
@@ -271,7 +272,7 @@ def _load_tokenizer(model_name: str) -> Any:
 
 
 def _windows(text: str, tokenizer: Any) -> list[str]:
-    """Cut prose into fewer than 190 Nomic tokens, overlapping by 50."""
+    """Cut prose into fewer than 190 Nomic tokens, overlapping by 25."""
     folded = " ".join(text.split())
     if not folded:
         return []
