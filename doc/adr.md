@@ -64,7 +64,7 @@ The first schedule was pool 12, then 24, then 48, with final k 3, then 5, then 8
 
 The gold chunk was already in the fused list at pool 12. It was ranked badly, not missing. Widening the pool does not fix that. Widening how many chunks Qwen sees does.
 
-The live constants are pool 12, final k `(3, 5, 8)`, and RRF k 60. `Pipeline` stores `final_k`. `ask` still searches once and returns the full fused list. It does not slice by `final_k` and it does not retry. Sufficiency is not wired yet. When that path is added, the pool stays 12 and only final k grows. How equal RRF scores are ordered is ADR 10.
+The pool stays 12. RRF k stays 60. Growing final k on a sufficiency `NO` is not live. ADR 12 replaced that retry with one slice of 8. How equal RRF scores are ordered is ADR 10.
 
 ## ADR 8 — Overlap 25 tokens, not 50
 
@@ -88,9 +88,24 @@ Fusion stays rank-only. `1 / (60 + rank)` is still the score. Raw BM25 scores an
 
 When two fused scores are equal, sort by cosine rank ascending (a chunk missing from cosine sorts last), then by `chunk_id`. Dict insertion order is not used. A chunk that is cosine rank 1 and BM25 rank 2 stays ahead of a chunk that is cosine rank 2 and BM25 rank 1.
 
+## ADR 11 — Sufficiency is a separate Qwen call
+
+Status: superseded by ADR 12
+
+After Cohere, the same local `qwen3:8b` was called twice through `OllamaLLM.complete`. The first call was a judge: are the current final-k excerpts enough to support a cited answer? The second call wrote the answer. On `NO`, final k grew `3 → 5 → 8`. Thinking was on. That loop is not live. ADR 12 removed it.
+
+## ADR 12 — Drop the judge loop; answer from a fixed top 8
+
+Status: accepted
+
+The judge loop called Qwen once per attempt, with thinking on, before the answer call. One question could take about a minute. A direct run that skipped the judge and sent the top 5 still missed a second difference: it reported the payment-day change and not the approval amount, because it stopped after the first number in the slice.
+
+`ask` now searches once, reranks once, and sends Cohere's top 8 chunks to one answer call. There is no sufficiency prompt and no retry. `FINAL_K` is `8`. The pool stays 12. Thinking is off. `llm.py` still strips a leftover `<think>` block.
+
+The answer prompt does the work the judge used to gate. A what-changed question must pair excerpts that share a section and state every old value and new value in that slice, including both a time change and an amount change when both pairs are present. A section that appears for only one version is reported as missing its pair. The model does not guess the missing value. A rule-in-force question still uses only the excerpt whose `superseded_by` is `none`. Retrieval still does not filter on `superseded_by`.
+
 ## Not recorded yet
 
 - No `superseded_by` filter at search time. Both accounts-payable versions stay in the index.
-- Hybrid search is BM25 plus cosine, merged with RRF, then Cohere `rerank-v4.0-pro`. That Cohere call is not wired into `Pipeline` yet.
 - PDFs live in `data/raw/`. Ingestion reads `data/text/`. `data/gold/` is not ingested.
 - OCR runs only when a page has no text layer.

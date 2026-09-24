@@ -1,1 +1,97 @@
-[]
+[
+  {
+    "question": "What is the current invoice approval threshold in AP-5.1?",
+    "expected_chunk_ids": ["ap-us-0001:v2.0:AP-5.1:1"],
+    "expected_substrings": ["$10,000", "AP-5.1", "none"]
+  },
+  {
+    "question": "What changed in the invoice approval threshold?",
+    "expected_chunk_ids": [
+      "ap-us-0001:v1.0:AP-5.1:1",
+      "ap-us-0001:v2.0:AP-5.1:1"
+    ],
+    "expected_substrings": ["$7,500", "$10,000", "AP-5.1"]
+  },
+  {
+    "question": "What is the current rule for how soon an invoice must be paid after the three-way match?",
+    "expected_chunk_ids": ["ap-us-0001:v2.0:AP-6.1:2"],
+    "expected_substrings": ["30 days", "AP-6.1", "none"]
+  },
+  {
+    "question": "What changed in how many days an invoice must be paid?",
+    "expected_chunk_ids": [
+      "ap-us-0001:v1.0:AP-6.1:2",
+      "ap-us-0001:v2.0:AP-6.1:2"
+    ],
+    "expected_substrings": ["45 days", "30 days", "AP-6.1"]
+  },
+  {
+    "question": "What is the meal expense cap?",
+    "expected_chunk_ids": ["exp-us-0001:v1.0:EXP-4.1:1"],
+    "expected_substrings": ["$75", "EXP-4.1"]
+  },
+  {
+    "question": "When must an employee attach a receipt?",
+    "expected_chunk_ids": ["exp-us-0001:v1.0:EXP-3.2:1"],
+    "expected_substrings": ["$25", "EXP-3.2"]
+  },
+  {
+    "question": "Which ledger code records travel spending?",
+    "expected_chunk_ids": ["mec-us-0001:v1.0:page-1:1:4"],
+    "expected_substrings": ["6100-TRAVEL"]
+  },
+  {
+    "question": "Which company must be used for airport car service?",
+    "expected_chunk_ids": ["exp-us-0001:v1.0:EXP-4.6:2"],
+    "expected_substrings": ["Northstar Logistics", "EXP-4.6"]
+  },
+  {
+    "question": "What is AP-5.1?",
+    "expected_chunk_ids": [
+      "ap-us-0001:v1.0:AP-5.1:1",
+      "ap-us-0001:v2.0:AP-5.1:1"
+    ],
+    "expected_substrings": ["$10,000", "AP-5.1"]
+  },
+  {
+    "question": "What ledger code records unpaid bills?",
+    "expected_chunk_ids": ["mec-us-0001:v1.0:page-1:1:4"],
+    "expected_substrings": ["2100-AP"]
+  },
+  {
+    "question": "When must a claim be filed?",
+    "expected_chunk_ids": ["exp-us-0001:v1.0:EXP-5.1:2"],
+    "expected_substrings": ["30 days", "EXP-5.1"]
+  },
+  {
+    "question": "Who clears a flagged duplicate invoice before it is paid?",
+    "expected_chunk_ids": ["ap-us-0001:v2.0:AP-4.2:1"],
+    "expected_substrings": ["AP supervisor", "AP-4.2"]
+  },
+  {
+    "question": "What is section AP-5.1 about?",
+    "expected_chunk_ids": [
+      "ap-us-0001:v1.0:AP-5.1:1",
+      "ap-us-0001:v2.0:AP-5.1:1"
+    ],
+    "expected_substrings": ["$10,000", "AP-5.1"]
+  },
+  {
+    "question": "What does code EXP-8.1 say?",
+    "expected_chunk_ids": ["exp-us-0001:v1.0:EXP-8.1:2"],
+    "expected_substrings": ["social fund", "EXP-8.1"]
+  },
+  {
+    "question": "Quote the rule numbered EXP-4.5.",
+    "expected_chunk_ids": ["exp-us-0001:v1.0:EXP-4.5:1"],
+    "expected_substrings": ["$175", "EXP-4.5"]
+  },
+  {
+    "question": "Define the terms in AP-2.1.",
+    "expected_chunk_ids": [
+      "ap-us-0001:v1.0:AP-2.1:1",
+      "ap-us-0001:v2.0:AP-2.1:1"
+    ],
+    "expected_substrings": ["quantity", "AP-2.1"]
+  }
+]

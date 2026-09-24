@@ -33,7 +33,8 @@ def parse_pdfs(raw_dir: Path) -> list[ParsedPage]:
             continue
         document = pymupdf.open(path)
         try:
-            for index, page in enumerate(document, start=1):
+            for index in range(document.page_count):
+                page = document.load_page(index)
                 text = page.get_text("text").strip()
                 if text:
                     source = "text"
@@ -41,7 +42,7 @@ def parse_pdfs(raw_dir: Path) -> list[ParsedPage]:
                     text = _ocr_page(page).strip()
                     source = "image"
                 pages.append(
-                    ParsedPage(path=path, page=index, text=text, source=source)
+                    ParsedPage(path=path, page=index + 1, text=text, source=source)
                 )
         finally:
             document.close()

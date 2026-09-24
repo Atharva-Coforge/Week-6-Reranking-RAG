@@ -8,7 +8,7 @@ _THINK = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
 class OllamaLLM:
-    """One chat call to local `qwen3:8b`. Thinking is on."""
+    """One chat call to local `qwen3:8b`. Thinking is off."""
 
     def __init__(self, url: str, model: str) -> None:
         self._url = url.rstrip("/")
@@ -25,7 +25,7 @@ class OllamaLLM:
                     {"role": "user", "content": user},
                 ],
                 "stream": False,
-                "think": True,
+                "think": False,
             },
             timeout=120.0,
         )

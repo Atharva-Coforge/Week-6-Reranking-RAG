@@ -14,13 +14,7 @@ from .adapters import (
     SearchHit,
     VectorStoreAdapter,
 )
-from .prompts import (
-    ANSWER_SYSTEM,
-    SUFFICIENCY_SYSTEM,
-    answer_user,
-    parse_sufficiency,
-    sufficiency_user,
-)
+from .prompts import ANSWER_SYSTEM, answer_user
 
 _WHAT_CHANGED = (
     "what changed",
@@ -34,7 +28,7 @@ _WHAT_CHANGED = (
 )
 
 FIRST_POOL = 12
-FINAL_K = (3, 5, 8)
+FINAL_K = 8
 RRF_K = 60
 
 
@@ -51,6 +45,9 @@ class Retrieval:
     sufficiency_text: str
     question_type: str
     answer: str
+    final_k_used: int
+    sufficiency_attempts: tuple[tuple[int, bool, str], ...]
+    log: str
 
 
 class Pipeline:
@@ -61,7 +58,7 @@ class Pipeline:
         embedder: EmbeddingModelAdapter,
         store: VectorStoreAdapter,
         pool_size: int = FIRST_POOL,
-        final_k: tuple[int, int, int] = FINAL_K,
+        final_k: int = FINAL_K,
         rrf_constant: int = RRF_K,
         reranker: ReRankerAdapter | None = None,
         llm: LLMAdapter | None = None,
@@ -77,26 +74,75 @@ class Pipeline:
     def ask(self, question: str) -> Retrieval:
         """Search the existing index. PDFs and `data/text/` are not read.
 
-        The question is embedded once. Later retries reuse that vector
-        and the same fused list. Only `final_k` grows: 3, then 5, then 8.
+        The question is embedded once. Cohere's top 8 chunks go straight
+        to the answer call. There is no sufficiency judge and no retry.
         """
         query_vector = self._embedder.embed_query(question)
         found = self._retrieve(question, query_vector)
         reranked = _apply_order(found.fused, self._rerank(question, found.fused))
-        final = reranked[: self._final_k[0]]
-        sufficient, sufficiency_text = self._sufficiency(question, final)
         question_type = classify_question(question)
+        final = reranked[:8]
         answer = self._answer(question, final, question_type)
+        log = format_ask_log(
+            question,
+            question_type=question_type,
+            bm25=found.bm25,
+            cosine=found.cosine,
+            fused=found.fused,
+            reranked=reranked,
+            attempts=(),
+            final_k_used=len(final),
+        )
         return Retrieval(
             bm25=found.bm25,
             cosine=found.cosine,
             fused=found.fused,
             reranked=reranked,
             final=final,
-            sufficient=sufficient,
-            sufficiency_text=sufficiency_text,
+            sufficient=False,
+            sufficiency_text="",
             question_type=question_type,
             answer=answer,
+            final_k_used=len(final),
+            sufficiency_attempts=(),
+            log=log,
+        )
+
+    def ask_direct(self, question: str, final_k: int = 5) -> Retrieval:
+        """Send Cohere's top `final_k` chunks to Qwen. No sufficiency judge.
+
+        Retrieval matches `ask`: one query vector, pool 12, then RRF, then
+        Cohere. The answer call sees only that fixed slice.
+        """
+        query_vector = self._embedder.embed_query(question)
+        found = self._retrieve(question, query_vector)
+        reranked = _apply_order(found.fused, self._rerank(question, found.fused))
+        question_type = classify_question(question)
+        final = reranked[:final_k]
+        answer = self._answer(question, final, question_type)
+        log = "path: direct\n" + format_ask_log(
+            question,
+            question_type=question_type,
+            bm25=found.bm25,
+            cosine=found.cosine,
+            fused=found.fused,
+            reranked=reranked,
+            attempts=(),
+            final_k_used=len(final),
+        )
+        return Retrieval(
+            bm25=found.bm25,
+            cosine=found.cosine,
+            fused=found.fused,
+            reranked=reranked,
+            final=final,
+            sufficient=False,
+            sufficiency_text="",
+            question_type=question_type,
+            answer=answer,
+            final_k_used=len(final),
+            sufficiency_attempts=(),
+            log=log,
         )
 
     def _retrieve(self, question: str, query_vector: list[float]) -> Retrieval:
@@ -113,28 +159,20 @@ class Pipeline:
             cosine=cosine,
             fused=fused,
             reranked=fused,
-            final=fused[: self._final_k[0]],
+            final=fused[: self._final_k],
             sufficient=False,
             sufficiency_text="",
             question_type="",
             answer="",
+            final_k_used=0,
+            sufficiency_attempts=(),
+            log="",
         )
-
-    def _sufficiency(
-        self, question: str, hits: list[SearchHit]
-    ) -> tuple[bool, str]:
-        """One judge call on the current final-k slice. No answer text."""
-        if self._llm is None or not hits:
-            return False, ""
-        text = self._llm.complete(
-            SUFFICIENCY_SYSTEM, sufficiency_user(question, hits)
-        )
-        return parse_sufficiency(text), text
 
     def _answer(
         self, question: str, hits: list[SearchHit], question_type: str
     ) -> str:
-        """One answer call on the current final-k slice. After the judge."""
+        """One answer call on the current final-k slice."""
         if self._llm is None or not hits:
             return ""
         return self._llm.complete(
@@ -149,6 +187,45 @@ class Pipeline:
         if self._reranker is None or not fused:
             return list(range(len(fused)))
         return self._reranker.rerank(question, rerank_documents(fused))
+
+
+def format_ask_log(
+    question: str,
+    *,
+    question_type: str,
+    bm25: list[SearchHit],
+    cosine: list[SearchHit],
+    fused: list[SearchHit],
+    reranked: list[SearchHit],
+    attempts: tuple[tuple[int, bool, str], ...],
+    final_k_used: int,
+) -> str:
+    """Query, ranked ids, and each sufficiency verdict. Used for diagnosis."""
+    lines = [
+        f"query: {question}",
+        f"question_type: {question_type}",
+        *_id_lines("bm25", bm25),
+        *_id_lines("cosine", cosine),
+        *_id_lines("rrf", fused),
+        *_id_lines("cohere", reranked),
+        f"final_k_used: {final_k_used}",
+    ]
+    if not attempts:
+        lines.append("sufficiency: skipped")
+        return "\n".join(lines)
+    lines.append("sufficiency:")
+    for k, sufficient, text in attempts:
+        verdict = "YES" if sufficient else "NO"
+        reason = text.strip().replace("\n", " / ")
+        lines.append(f"  k={k} {verdict}  {reason}")
+    return "\n".join(lines)
+
+
+def _id_lines(title: str, hits: list[SearchHit]) -> list[str]:
+    lines = [f"{title}: {len(hits)}"]
+    for index, hit in enumerate(hits, start=1):
+        lines.append(f"  {index}. {hit['id']}")
+    return lines
 
 
 def classify_question(question: str) -> str:

@@ -26,3 +26,4 @@ exclude = ["(?x)(^data/)"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]

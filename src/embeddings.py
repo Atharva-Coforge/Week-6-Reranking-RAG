@@ -1,5 +1,7 @@
 """Nomic bi-encoder. Prefixes are applied here and are not stored."""
 
+from typing import Any, cast
+
 import torch
 from sentence_transformers import SentenceTransformer
 
@@ -34,8 +36,9 @@ def _restore_attention_mask_method(model: SentenceTransformer) -> None:
         cls = module.__class__
         if cls.__name__ != "NomicBertModel":
             continue
-        if not hasattr(cls, "get_extended_attention_mask"):
-            cls.get_extended_attention_mask = _get_extended_attention_mask
+        target = cast(Any, cls)
+        if not hasattr(target, "get_extended_attention_mask"):
+            target.get_extended_attention_mask = _get_extended_attention_mask
         return
 
 

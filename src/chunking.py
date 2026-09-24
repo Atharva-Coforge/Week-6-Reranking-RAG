@@ -174,9 +174,7 @@ def _complete(chunk: Chunk, *, require_date: bool) -> bool:
         return False
     if chunk.source not in ("text", "image"):
         return False
-    if require_date and not chunk.effective_date.strip():
-        return False
-    return True
+    return not (require_date and not chunk.effective_date.strip())
 
 
 def _pages(markdown: str) -> list[_Page]:
