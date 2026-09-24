@@ -10,4 +10,4 @@ part: 3
 source: text
 effective_date: 2023-01-01
 
-not release the invoice merely to meet the payment period. The hold stays until the decision is on the record. A decision that arrives after the payment period has ended still controls the invoice. The clerk pays only the amount that was approved and records the decision date beside the payment date. When the referral uncovers a second problem, both stay with the finance manager until both are decided. The clerk adds the second problem to the same invoice record. The audit copy keeps the referral, the decision, and the date the hold ended.
+and records the decision date beside the payment date. When the referral uncovers a second problem, both stay with the finance manager until both are decided. The clerk adds the second problem to the same invoice record. The audit copy keeps the referral, the decision, and the date the hold ended.
