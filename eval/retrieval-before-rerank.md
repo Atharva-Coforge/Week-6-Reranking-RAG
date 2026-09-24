@@ -4,11 +4,8 @@ Question: `What is section AP-5.1 about?`
 
 BM25 pool: 12 (cap 12). 
 Cosine / vector pool: 12 (cap 12). 
-Fused: 18. RRF is the union of the two pools, 
-so it can be longer than 12 when the lists do not fully overlap.
-
-A later Cohere step receives the question plus the fused raw texts, 
-in fused order. No vectors. No prefixes.
+Fused: 18. This is the Cohere input: the raw 
+question plus these bodies, in RRF order. No vectors. No prefixes.
 
 # BM25
 
@@ -206,7 +203,7 @@ AP-8.1 Recording and outcome The match, the approval, and the payment are stored
 
 AP-3.1 Matching requirements An invoice is paid only when the purchase order, the delivery record, and the invoice agree on vendor, item description, quantity, and price. The AP clerk performs this three-way match at intake and records the result on the invoice before payment.
 
-# Fused (reranker input)
+# Fused (RRF / reranker input)
 
 ## 1. `ap-us-0001:v1.0:AP-7.1:2`
 
