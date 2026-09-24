@@ -10,14 +10,16 @@ from dataclasses import dataclass
 from .adapters import EmbeddingModelAdapter, SearchHit, VectorStoreAdapter
 
 FIRST_POOL = 12
+RRF_K = 60
 
 
 @dataclass(frozen=True)
 class Retrieval:
-    """One BM25 list and one cosine list. RRF merges them in the next step."""
+    """BM25 hits, cosine hits, and the RRF merge of those two lists."""
 
     bm25: list[SearchHit]
     cosine: list[SearchHit]
+    fused: list[SearchHit]
 
 
 class Pipeline:
@@ -28,10 +30,12 @@ class Pipeline:
         embedder: EmbeddingModelAdapter,
         store: VectorStoreAdapter,
         pool_size: int = FIRST_POOL,
+        rrf_constant: int = RRF_K,
     ) -> None:
         self._embedder = embedder
         self._store = store
         self._pool_size = pool_size
+        self._rrf_constant = rrf_constant
 
     def ask(self, question: str) -> Retrieval:
         """Search the existing index. PDFs and `data/text/` are not read.
@@ -42,8 +46,35 @@ class Pipeline:
         return self._retrieve(question, query_vector)
 
     def _retrieve(self, question: str, query_vector: list[float]) -> Retrieval:
-        """BM25 and cosine share this vector. Do not embed the question again."""
+        """BM25 and cosine share this vector. Do not embed the question again.
+
+        Both accounts-payable versions stay in the lists. There is no
+        `superseded_by` filter.
+        """
+        bm25 = self._store.keyword_search(question, self._pool_size)
+        cosine = self._store.query(query_vector, self._pool_size)
         return Retrieval(
-            bm25=self._store.keyword_search(question, self._pool_size),
-            cosine=self._store.query(query_vector, self._pool_size),
+            bm25=bm25,
+            cosine=cosine,
+            fused=reciprocal_rank_fusion(bm25, cosine, self._rrf_constant),
         )
+
+
+def reciprocal_rank_fusion(
+    bm25: list[SearchHit],
+    cosine: list[SearchHit],
+    rrf_constant: int,
+) -> list[SearchHit]:
+    """Merge by `chunk_id` using rank only. Scores and distances are ignored."""
+    scores: dict[str, float] = {}
+    rows: dict[str, SearchHit] = {}
+    for rank, hit in enumerate(bm25, start=1):
+        chunk_id = hit["id"]
+        scores[chunk_id] = scores.get(chunk_id, 0.0) + 1.0 / (rrf_constant + rank)
+        rows[chunk_id] = hit
+    for rank, hit in enumerate(cosine, start=1):
+        chunk_id = hit["id"]
+        scores[chunk_id] = scores.get(chunk_id, 0.0) + 1.0 / (rrf_constant + rank)
+        rows[chunk_id] = hit
+    ordered = sorted(scores, key=lambda chunk_id: scores[chunk_id], reverse=True)
+    return [rows[chunk_id] for chunk_id in ordered]
