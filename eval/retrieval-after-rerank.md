@@ -2,7 +2,7 @@
 
 Question: `What is section AP-5.1 about?`
 
-Pool 12 per search. Final k 3. 
+Pool 12 per search. Final k 8. 
 Compare this order with `eval/retrieval-before-rerank.md`.
 
 ## Reranked (Cohere)
@@ -51,3 +51,43 @@ AP-5.1 Approval thresholds An invoice of $10,000 or more requires the approval o
 - superseded_by: `ap-us-0001-v2.0`
 
 AP-7.1 Exception and escalation Where a discrepancy under Section AP-3.2 remains unresolved, or where an approval required under Section AP-5.1 has not been obtained as the payment period in Section AP-6.1 approaches, the AP supervisor escalates the invoice to the finance manager. The finance manager may approve payment, request further information, or direct that the invoice be returned to the vendor. Escalation is a written referral. The AP supervisor records the invoice number, the vendor, the amount, the date the three-way match failed or the approval was found missing, and the question the finance manager must decide. A spoken request does not start the escalation, and it does not release the hold. The finance manager answers in writing on the invoice record. Approving payment lets the clerk schedule it. Asking for further
+
+## 4. `ap-us-0001:v2.0:AP-7.1:2`
+
+- section: `AP-7.1`
+- version: `v2.0`
+- superseded_by: `none`
+
+AP-7.1 Exception and escalation Where a discrepancy under Section AP-3.2 remains unresolved, or where an approval required under Section AP-5.1 has not been obtained as the payment period in Section AP-6.1 approaches, the AP supervisor escalates the invoice to the finance manager. The finance manager may approve payment, request further information, or direct that the invoice be returned to the vendor. Escalation is a written referral. The AP supervisor records the invoice number, the vendor, the amount, the date the three-way match failed or the approval was found missing, and the question the finance manager must decide. A spoken request does not start the escalation, and it does not release the hold. The finance manager answers in writing on the invoice record. Approving payment lets the clerk schedule it. Asking for further
+
+## 5. `ap-us-0001:v1.0:AP-3.2:1`
+
+- section: `AP-3.2`
+- version: `v1.0`
+- superseded_by: `ap-us-0001-v2.0`
+
+AP-3.2 Discrepancy handling Where the three-way match fails on quantity, price, or description, the invoice is placed on hold and sent to the AP supervisor. The supervisor works with the vendor or the requesting department until the discrepancy is resolved. An invoice on hold does not start the payment period in Section AP-6.1 until the match is confirmed.
+
+## 6. `ap-us-0001:v2.0:AP-3.2:1`
+
+- section: `AP-3.2`
+- version: `v2.0`
+- superseded_by: `none`
+
+AP-3.2 Discrepancy handling Where the three-way match fails on quantity, price, or description, the invoice is placed on hold and sent to the AP supervisor. The supervisor works with the vendor or the requesting department until the discrepancy is resolved. An invoice on hold does not start the payment period in Section AP-6.1 until the match is confirmed.
+
+## 7. `ap-us-0001:v2.0:AP-3.1:1`
+
+- section: `AP-3.1`
+- version: `v2.0`
+- superseded_by: `none`
+
+AP-3.1 Matching requirements An invoice is paid only when the purchase order, the delivery record, and the invoice agree on vendor, item description, quantity, and price. The AP clerk performs this three-way match at intake and records the result on the invoice before payment.
+
+## 8. `ap-us-0001:v1.0:AP-6.1:2`
+
+- section: `AP-6.1`
+- version: `v1.0`
+- superseded_by: `ap-us-0001-v2.0`
+
+AP-6.1 Payment timing An invoice is paid within 45 days of the date the three-way match is confirmed. Where an invoice cannot be paid inside that period, the AP clerk records the reason for the delay and notifies the AP supervisor.

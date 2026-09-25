@@ -41,12 +41,9 @@ class Retrieval:
     fused: list[SearchHit]
     reranked: list[SearchHit]
     final: list[SearchHit]
-    sufficient: bool
-    sufficiency_text: str
     question_type: str
     answer: str
     final_k_used: int
-    sufficiency_attempts: tuple[tuple[int, bool, str], ...]
     log: str
 
 
@@ -74,14 +71,14 @@ class Pipeline:
     def ask(self, question: str) -> Retrieval:
         """Search the existing index. PDFs and `data/text/` are not read.
 
-        The question is embedded once. Cohere's top 8 chunks go straight
-        to the answer call. There is no sufficiency judge and no retry.
+        The question is embedded once. Cohere's top `final_k` chunks go
+        straight to the answer call. The default is 8.
         """
         query_vector = self._embedder.embed_query(question)
         found = self._retrieve(question, query_vector)
         reranked = _apply_order(found.fused, self._rerank(question, found.fused))
         question_type = classify_question(question)
-        final = reranked[:8]
+        final = reranked[: self._final_k]
         answer = self._answer(question, final, question_type)
         log = format_ask_log(
             question,
@@ -90,7 +87,6 @@ class Pipeline:
             cosine=found.cosine,
             fused=found.fused,
             reranked=reranked,
-            attempts=(),
             final_k_used=len(final),
         )
         return Retrieval(
@@ -99,49 +95,9 @@ class Pipeline:
             fused=found.fused,
             reranked=reranked,
             final=final,
-            sufficient=False,
-            sufficiency_text="",
             question_type=question_type,
             answer=answer,
             final_k_used=len(final),
-            sufficiency_attempts=(),
-            log=log,
-        )
-
-    def ask_direct(self, question: str, final_k: int = 5) -> Retrieval:
-        """Send Cohere's top `final_k` chunks to Qwen. No sufficiency judge.
-
-        Retrieval matches `ask`: one query vector, pool 12, then RRF, then
-        Cohere. The answer call sees only that fixed slice.
-        """
-        query_vector = self._embedder.embed_query(question)
-        found = self._retrieve(question, query_vector)
-        reranked = _apply_order(found.fused, self._rerank(question, found.fused))
-        question_type = classify_question(question)
-        final = reranked[:final_k]
-        answer = self._answer(question, final, question_type)
-        log = "path: direct\n" + format_ask_log(
-            question,
-            question_type=question_type,
-            bm25=found.bm25,
-            cosine=found.cosine,
-            fused=found.fused,
-            reranked=reranked,
-            attempts=(),
-            final_k_used=len(final),
-        )
-        return Retrieval(
-            bm25=found.bm25,
-            cosine=found.cosine,
-            fused=found.fused,
-            reranked=reranked,
-            final=final,
-            sufficient=False,
-            sufficiency_text="",
-            question_type=question_type,
-            answer=answer,
-            final_k_used=len(final),
-            sufficiency_attempts=(),
             log=log,
         )
 
@@ -160,24 +116,27 @@ class Pipeline:
             fused=fused,
             reranked=fused,
             final=fused[: self._final_k],
-            sufficient=False,
-            sufficiency_text="",
             question_type="",
             answer="",
             final_k_used=0,
-            sufficiency_attempts=(),
             log="",
         )
 
     def _answer(
         self, question: str, hits: list[SearchHit], question_type: str
     ) -> str:
-        """One answer call on the current final-k slice."""
+        """One answer call on the current final-k slice.
+
+        Each final chunk's citation is appended after the model text, so a
+        reply that drops the parenthesis still names its sources.
+        """
         if self._llm is None or not hits:
             return ""
-        return self._llm.complete(
+        answer = self._llm.complete(
             ANSWER_SYSTEM, answer_user(question, hits, question_type)
         )
+        sources = "\n".join(_citation(hit) for hit in hits)
+        return f"{answer}\n{sources}"
 
     def _rerank(self, question: str, fused: list[SearchHit]) -> list[int]:
         """Send the raw question and fused bodies to Cohere.
@@ -189,6 +148,15 @@ class Pipeline:
         return self._reranker.rerank(question, rerank_documents(fused))
 
 
+def _citation(hit: SearchHit) -> str:
+    """One source line in the form the answer prompt requires."""
+    meta = hit["metadata"]
+    return (
+        f"({meta.get('document_name', '')}, {meta.get('section', '')}, "
+        f"{meta.get('version', '')}, {meta.get('superseded_by', '')})"
+    )
+
+
 def format_ask_log(
     question: str,
     *,
@@ -197,10 +165,9 @@ def format_ask_log(
     cosine: list[SearchHit],
     fused: list[SearchHit],
     reranked: list[SearchHit],
-    attempts: tuple[tuple[int, bool, str], ...],
     final_k_used: int,
 ) -> str:
-    """Query, ranked ids, and each sufficiency verdict. Used for diagnosis."""
+    """Query and the ranked ids after BM25, cosine, RRF, and Cohere."""
     lines = [
         f"query: {question}",
         f"question_type: {question_type}",
@@ -210,14 +177,6 @@ def format_ask_log(
         *_id_lines("cohere", reranked),
         f"final_k_used: {final_k_used}",
     ]
-    if not attempts:
-        lines.append("sufficiency: skipped")
-        return "\n".join(lines)
-    lines.append("sufficiency:")
-    for k, sufficient, text in attempts:
-        verdict = "YES" if sufficient else "NO"
-        reason = text.strip().replace("\n", " / ")
-        lines.append(f"  k={k} {verdict}  {reason}")
     return "\n".join(lines)
 
 

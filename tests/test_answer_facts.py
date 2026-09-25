@@ -1,9 +1,4 @@
-"""Recall: each expected chunk id is in the RRF retrieved set.
-
-No Cohere call and no Ollama call. The retrieved set is the fused list,
-which is every chunk returned by BM25 or cosine. The on-disk answer
-cache is not read.
-"""
+"""Expected facts are in the final-k excerpts. No Cohere and no Ollama."""
 
 import json
 from pathlib import Path
@@ -15,6 +10,7 @@ from src.chroma_store import ChromaStore
 from src.config import load_config
 from src.embeddings import NomicEmbeddingModel
 from src.pipeline import Pipeline
+from src.prompts import excerpt_block
 
 
 class Question(TypedDict):
@@ -45,16 +41,11 @@ def pipeline() -> Pipeline:
 
 
 @pytest.mark.parametrize("item", QUESTIONS, ids=[item["question"] for item in QUESTIONS])
-def test_expected_chunk_is_retrieved(pipeline: Pipeline, item: Question) -> None:
-    """The gold chunk id is in the fused list and in the final-k slice."""
-    question = item["question"]
-    expected = item["expected_chunk_ids"]
-    found = pipeline.ask(question)
-    retrieved = {hit["id"] for hit in found.fused}
-    missing = [chunk_id for chunk_id in expected if chunk_id not in retrieved]
-    assert not missing, f"{question}: missing {missing}"
-    final_ids = {hit["id"] for hit in found.final}
-    missing_final = [chunk_id for chunk_id in expected if chunk_id not in final_ids]
-    assert not missing_final, (
-        f"{question}: not in final {found.final_k_used}: {missing_final}"
-    )
+def test_expected_substrings_are_in_final_text(
+    pipeline: Pipeline, item: Question
+) -> None:
+    """Every expected substring appears in the text of the final-k chunks."""
+    found = pipeline.ask(item["question"])
+    text = excerpt_block(found.final)
+    missing = [part for part in item["expected_substrings"] if part not in text]
+    assert not missing, f"{item['question']}: missing {missing}"

@@ -8,15 +8,22 @@ BM25 now keeps the hyphenated form (`ap-5.1`, `6100-travel`) as well as the spli
 
 ## Recall
 
-16 questions in `eval/questions.json`. 21 expected chunk ids. A hit is an expected id inside that list's pool. The pool is 12 for BM25 and 12 for cosine. Fused is the RRF merge of those two lists. `tests/test_recall.py` checks the fused list and passed 16/16.
+16 questions in `eval/questions.json`. 21 expected chunk ids. A hit is an expected id inside that list's pool. The pool is 12 for BM25 and 12 for cosine. Fused is the RRF merge of those two lists. Final k is the first 8 fused hits, the slice sent to the answer call when Cohere is not in the path. `tests/test_recall.py` checks both the fused list and that slice, and passed 16/16.
 
 | List | Expected ids found | Recall |
 | ---- | ------------------ | ------ |
 | BM25 | 21/21 | 1.00 |
 | Cosine | 19/21 | 0.90 |
 | Fused (RRF) | 21/21 | 1.00 |
+| Final k (8) | 21/21 | 1.00 |
+
+Answer checks 16/16. `tests/test_answer.py` called Cohere and local Qwen once per question. Each answer contained the expected substrings and a four-field citation. `tests/test_answer_facts.py` checks those same substrings in the final-k excerpt text and does not call Cohere or Ollama, so CI still runs that check.
 
 Cosine missed `exp-us-0001:v1.0:EXP-8.1:2` (`What does code EXP-8.1 say?`) and `exp-us-0001:v1.0:EXP-4.5:1` (`Quote the rule numbered EXP-4.5.`). BM25 ranked both first, so both are in the fused list.
+
+## Hybrid versus vector — `Quote the rule numbered EXP-4.5.`
+
+This is the hybrid proof. BM25 rank 1 is `exp-us-0001:v1.0:EXP-4.5:1`. Cosine's pool of 12 does not contain that id. The fused list does: it is fused rank 8. The same pattern holds for `exp-us-0001:v1.0:EXP-8.1:2` on `What does code EXP-8.1 say?`. The `6100-TRAVEL` lists below are not this proof, because cosine already ranks that chunk first.
 
 ## Hybrid versus vector — `What is section AP-5.1 about?`
 
