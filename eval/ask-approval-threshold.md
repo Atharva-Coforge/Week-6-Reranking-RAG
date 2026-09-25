@@ -1,12 +1,9 @@
-# Data-quality diagnosis
+# Ask: What changed in the invoice approval threshold?
 
-Question: `What changed in the invoice approval threshold?`
-
-The question is a what-changed question. A rule-in-force question would cite only the current version and hide the conflict.
-
-## Ask log
+Verbatim output of `uv run python -m src.main ask "What changed in the invoice approval threshold?"`.
 
 ```
+cache miss
 query: What changed in the invoice approval threshold?
 question_type: what-changed
 bm25: 12
@@ -74,13 +71,7 @@ cohere: 18
   17. ap-us-0001:v2.0:AP-8.1:2
   18. exp-us-0001:v1.0:EXP-7.1:2
 final_k_used: 8
-```
-
-`question_type` is `what-changed`. The stale v1 chunk `ap-us-0001:v1.0:AP-5.1:1` is rank 1 on BM25, cosine, RRF, and Cohere. `final_k_used` is 8, so that chunk was sent to Qwen.
-
-## Answer
-
-```
+answer
 The invoice approval threshold changed from $7,500 (Accounts Payable Invoice Payment Procedure, AP-5.1, v1.0, ap-us-0001-v2.0) to $10,000 (Accounts Payable Invoice Payment Procedure, AP-5.1, v2.0, none).
 (Accounts Payable Invoice Payment Procedure, AP-5.1, v1.0, ap-us-0001-v2.0)
 (Accounts Payable Invoice Payment Procedure, AP-5.1, v2.0, none)
@@ -91,25 +82,3 @@ The invoice approval threshold changed from $7,500 (Accounts Payable Invoice Pay
 (Accounts Payable Invoice Payment Procedure, AP-7.1, v2.0, none)
 (Employee Expense Reimbursement Procedure, EXP-5.1, v1.0, none)
 ```
-
-The answer cites the old value and the new value. The same log and answer are saved in `eval/ask-approval-threshold.md`.
-
-## Source
-
-From `data/text/ap-us-0001-v1.0.md`:
-
-> An invoice of $7,500 or more requires the approval of the finance manager before payment.
-
-From `data/text/ap-us-0001-v2.0.md`:
-
-> An invoice of $10,000 or more requires the approval of the finance manager before payment.
-
-`data/raw/ap-us-0001-v1.0.pdf` contains `$7,500` in AP-5.1 and does not contain `$10,000`.
-
-## Conclusion
-
-Retrieval was right. It returned the chunk that is in the corpus, `ap-us-0001:v1.0:AP-5.1:1`.
-
-Generation was right. It used the text it was given and stated both `$7,500` and `$10,000`.
-
-The defect is the outdated file in `data/`, not the retriever or the model. The conflicting number is in `data/raw/ap-us-0001-v1.0.pdf`.

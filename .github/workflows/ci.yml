@@ -27,5 +27,8 @@ jobs:
       - name: ingest
         run: uv run python -m src.main ingest
 
+      - name: two-sentence check
+        run: uv run python -m src.two_sentence_check
+
       - name: pytest
         run: uv run pytest
