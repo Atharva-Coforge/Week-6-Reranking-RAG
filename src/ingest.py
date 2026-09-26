@@ -73,7 +73,7 @@ def run_ingest(config: Config) -> list[Chunk]:
     vectors = embed_chunks(embedder, chunks)
     store.reset()
     upsert_chunks(store, chunks, vectors)
-    store.rebuild_bm25()
+    # store.rebuild_bm25() Only here for now to ensure the BM25 is rebuilt after the new chunks are upserted
     AnswerCache(config.cache_dir).clear()
     return chunks
 
